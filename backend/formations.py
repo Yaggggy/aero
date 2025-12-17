@@ -22,9 +22,9 @@ def grid_formation(n, spacing=3):
                     return targets
                 targets.append(
                     np.array([
-                        (x - size/2) * spacing,
-                        (y - size/2) * spacing,
-                        (z - size/2) * spacing
+                        (x - size / 2) * spacing,
+                        (y - size / 2) * spacing,
+                        (z - size / 2) * spacing,
                     ])
                 )
     return targets

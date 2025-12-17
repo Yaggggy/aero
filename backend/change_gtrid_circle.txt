@@ -1,0 +1,13 @@
+
+Use them to in terminal to change the formations: 
+
+Invoke-RestMethod `  -Uri http://127.0.0.1:8000/formation`
+-Method POST `  -ContentType "application/json"`
+-Body '{"name":"circle"}'
+
+
+
+
+Invoke-RestMethod `  -Uri http://127.0.0.1:8000/formation`
+-Method POST `  -ContentType "application/json"`
+-Body '{"name":"grid"}'

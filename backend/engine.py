@@ -1,25 +1,30 @@
 import numpy as np
 from drone import Drone
-from formations import circle_formation
+from formations import circle_formation, grid_formation
 
 class SwarmEngine:
     def __init__(self, drone_count=1000):
         self.dt = 1 / 60
         self.max_speed = 5.0
         self.drones = self._init_drones(drone_count)
-        self.set_circle()
+        self.set_formation("circle")
 
     def _init_drones(self, n):
         drones = []
-        targets = circle_formation(n)
         for i in range(n):
             pos = np.random.uniform(-5, 5, size=3)
             vel = np.zeros(3)
-            drones.append(Drone(i, pos, vel, targets[i]))
+            drones.append(Drone(i, pos, vel, pos.copy()))
         return drones
 
-    def set_circle(self):
-        targets = circle_formation(len(self.drones))
+    def set_formation(self, name):
+        if name == "circle":
+            targets = circle_formation(len(self.drones))
+        elif name == "grid":
+            targets = grid_formation(len(self.drones))
+        else:
+            raise ValueError("Unknown formation")
+
         for d, t in zip(self.drones, targets):
             d.target = t
 
