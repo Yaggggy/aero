@@ -63,3 +63,9 @@ class SwarmEngine:
             }
             for d in self.drones
         ]
+
+    def update(self, dt=0.1):
+        dt *= self.speed_multiplier
+        force = (self.target - self.pos) * 0.6
+        self.vel = self.vel * 0.85 + force * dt
+        self.pos += self.vel * dt
