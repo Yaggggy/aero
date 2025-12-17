@@ -4,7 +4,7 @@ import * as BufferGeometryUtils from "https://unpkg.com/three@0.160.0/examples/j
 
 /* ---------- SCENE SETUP ---------- */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+scene.background = new THREE.Color(0x0b0c2b);
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -32,31 +32,43 @@ light.position.set(50, 100, 50);
 scene.add(light);
 
 /* ---------- GROUND ---------- */
+let groundHeight = -10;
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(500, 500),
-  new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 1 })
+  new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 1 })
 );
 ground.rotation.x = -Math.PI / 2;
-ground.position.y = -10;
+ground.position.y = groundHeight;
 scene.add(ground);
 
-const grid = new THREE.GridHelper(500, 50, 0x88aa88, 0x335533);
-grid.position.y = -9.9;
+const grid = new THREE.GridHelper(500, 50, 0x999999, 0x999999);
+grid.position.y = groundHeight + 0.1;
 scene.add(grid);
 
+window.setGroundHeight = (value) => {
+  const maxGround = -10; // starting position
+  const minGround = -200; // maximum downward
+
+  const percentage = parseFloat(value) / 100;
+  groundHeight = maxGround + percentage * (minGround - maxGround);
+  ground.position.y = groundHeight;
+  grid.position.y = groundHeight + 0.1;
+};
+
 /* ---------- WIND INDICATOR ---------- */
-let wind = { direction: new THREE.Vector3(1, 0, 0), strength: 5 };
-const windArrow = new THREE.ArrowHelper(
-  wind.direction,
-  new THREE.Vector3(-80, 5, -80),
-  20,
-  0x00ffcc
-);
-scene.add(windArrow);
+// let wind = { direction: new THREE.Vector3(1, 0, 0), strength: 5 };
+// const windArrow = new THREE.ArrowHelper(
+//   wind.direction,
+//   new THREE.Vector3(-80, 5, -80),
+//   20,
+//   0x00ffcc
+// );
+// scene.add(windArrow);
 
 /* ---------- DRONE GEOMETRY ---------- */
 function createDroneGeometry() {
   const geometries = [];
+
   const bodyGeom = new THREE.CylinderGeometry(0.15, 0.2, 0.4, 8);
   geometries.push(bodyGeom);
 
@@ -75,7 +87,7 @@ const dotMaterial = new THREE.MeshStandardMaterial({
   emissive: 0x112233,
 });
 const droneMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4444ff,
+  color: 0x00ffff,
   emissive: 0x111155,
   metalness: 0.3,
   roughness: 0.4,
@@ -94,7 +106,6 @@ const droneMesh = new THREE.InstancedMesh(
 );
 
 scene.add(dotMesh); // Default view
-
 let droneMode = "dot";
 const dummy = new THREE.Object3D();
 
@@ -117,7 +128,6 @@ window.setSpeed = (value) => {
 
 /* ---------- WEBSOCKET & API ---------- */
 let drones = [];
-const BASE_HEIGHT = 10;
 
 const ws = new WebSocket("ws://127.0.0.1:8000/ws");
 ws.onmessage = (event) => {
@@ -144,9 +154,11 @@ window.setText = () => {
 /* ---------- DRONE STATE ---------- */
 const dronePositions = Array(COUNT)
   .fill()
-  .map(() => new THREE.Vector3(0, BASE_HEIGHT, 0));
+  .map(() => new THREE.Vector3(0, 0, 0));
 
 /* ---------- ANIMATION LOOP ---------- */
+const MIN_DIST = 0.6; // collision avoidance
+
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
@@ -157,12 +169,27 @@ function animate() {
     drones.forEach((d, i) => {
       if (i >= COUNT) return;
 
-      // Smooth movement (lerp)
-      const target = new THREE.Vector3(
-        d.x + (Math.random() - 0.5) * 0.2, // small random offset
-        d.y + BASE_HEIGHT,
+      // Target position follows backend exactly (no height restriction)
+      let target = new THREE.Vector3(
+        d.x + (Math.random() - 0.5) * 0.2,
+        d.y * speedMultiplier, // no clamping, free height
         d.z + (Math.random() - 0.5) * 0.2
       );
+
+      // Collision avoidance in X/Z plane only
+      for (let j = 0; j < i; j++) {
+        const delta = new THREE.Vector3().subVectors(
+          dronePositions[i],
+          dronePositions[j]
+        );
+        const dist = delta.length();
+        if (dist < MIN_DIST) {
+          delta.y = 0;
+          delta.normalize().multiplyScalar(MIN_DIST - dist);
+          target.add(delta);
+        }
+      }
+
       dronePositions[i].lerp(target, 0.05 * speedMultiplier);
 
       dummy.position.copy(dronePositions[i]);
