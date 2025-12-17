@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AeroCanvas | Drone Swarm Controller</title>
+    <title>AeroCanvas Pro | Drone Swarm Command</title>
 
     <script type="importmap">
       {
@@ -16,172 +16,245 @@
 
     <style>
       :root {
-        --bg-dark: #0b0c2b;
-        --panel-bg: #161b33;
+        --bg-dark: #050512;
+        --panel-bg: rgba(15, 17, 35, 0.95);
         --accent: #00ffff;
-        --text-main: #ffffff;
-        --text-dim: #8892b0;
-        --border: #2d345e;
+        --accent-glow: rgba(0, 255, 255, 0.3);
+        --text-main: #e0e0e0;
+        --text-dim: #6b769e;
+        --border: #1f264d;
+        --danger: #ff4444;
+        --success: #00ff88;
       }
 
       body {
         margin: 0;
         overflow: hidden;
         background-color: var(--bg-dark);
-        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: "Segoe UI", Tahoma, sans-serif;
         color: var(--text-main);
       }
 
-      /* Sidebar Panel */
+      /* Sidebar HUD */
       #panel {
         position: fixed;
         left: 0;
         top: 0;
-        width: 260px;
+        width: 280px;
         height: 100%;
         background: var(--panel-bg);
-        padding: 20px;
+        backdrop-filter: blur(10px);
+        padding: 25px;
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 18px;
         box-sizing: border-box;
         border-right: 1px solid var(--border);
         z-index: 100;
-        box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+      }
+
+      .header-group {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
 
       h1 {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         margin: 0;
         color: var(--accent);
         text-transform: uppercase;
-        letter-spacing: 2px;
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 10px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 10px var(--accent-glow);
+      }
+
+      #status-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--danger);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--danger);
+        transition: 0.3s;
       }
 
       .section-label {
-        font-size: 0.75rem;
-        font-weight: bold;
+        font-size: 0.7rem;
+        font-weight: 800;
         color: var(--text-dim);
         text-transform: uppercase;
-        margin-top: 10px;
+        letter-spacing: 1px;
       }
 
-      /* UI Elements */
-      input,
-      button {
-        width: 100%;
-        box-sizing: border-box;
-        outline: none;
+      /* Control Elements */
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       button {
-        background: #2d345e;
+        background: #1a1e3d;
         color: white;
-        border: 1px solid #3d467a;
-        padding: 10px;
+        border: 1px solid var(--border);
+        padding: 12px;
         border-radius: 4px;
         cursor: pointer;
+        font-size: 0.85rem;
         font-weight: 600;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: left;
       }
 
       button:hover {
-        background: #3d467a;
+        background: #252b57;
         border-color: var(--accent);
-        box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+        color: var(--accent);
+        padding-left: 16px;
       }
 
-      #textInput {
-        background: var(--bg-dark);
+      input[type="text"] {
+        background: rgba(0, 0, 0, 0.3);
         border: 1px solid var(--border);
         color: white;
-        padding: 10px;
+        padding: 12px;
         border-radius: 4px;
+        font-size: 0.9rem;
+      }
+
+      input[type="text"]:focus {
+        border-color: var(--accent);
+        outline: none;
       }
 
       input[type="range"] {
-        cursor: pointer;
+        width: 100%;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        appearance: none;
         accent-color: var(--accent);
       }
 
-      /* Custom Toggle Button */
-      .btn-toggle {
-        background: #008080;
-        margin-top: 5px;
+      /* Specialized Buttons */
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg-dark);
+        border: none;
+        text-align: center;
       }
 
-      /* Compass Container at Bottom */
+      .btn-primary:hover {
+        background: #00dada;
+        color: var(--bg-dark);
+        padding-left: 12px;
+      }
+
+      .btn-toggle {
+        background: transparent;
+        border: 1px dashed var(--text-dim);
+        text-align: center;
+        color: var(--text-dim);
+      }
+
+      /* Compass HUD Component */
       .compass-box {
         margin-top: auto;
-        padding: 15px;
+        padding: 20px;
         background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
       }
 
       #compass {
-        width: 120px;
-        height: 120px;
+        width: 140px;
+        height: 140px;
+        filter: drop-shadow(0 0 5px var(--accent-glow));
       }
 
-      hr {
+      .telemetry-row {
+        display: flex;
+        justify-content: space-between;
         width: 100%;
-        border: 0;
-        border-top: 1px solid var(--border);
-        margin: 10px 0;
+        font-size: 0.65rem;
+        color: var(--text-dim);
+        margin-top: 10px;
       }
     </style>
   </head>
 
   <body>
     <div id="panel">
-      <h1>AeroCanvas</h1>
+      <div class="header-group">
+        <h1>AeroCanvas</h1>
+        <div id="status-dot" title="System Offline"></div>
+      </div>
 
-      <div class="section-label">Formations</div>
-      <button onclick="setFormation('circle')">Circle Orbit</button>
-      <button onclick="setFormation('grid')">Static Grid</button>
+      <div class="control-group">
+        <div class="section-label">Formation Modules</div>
+        <button onclick="setFormation('circle')">Active Circle Orbit</button>
+        <button onclick="setFormation('grid')">Static Grid Array</button>
+        <button onclick="setFormation('sphere')">Spherical Swarm</button>
+      </div>
 
-      <div class="section-label">Environment</div>
-      <label style="font-size: 0.8rem">Ground Height</label>
-      <input
-        type="range"
-        min="-50"
-        max="0"
-        step="0.5"
-        value="-10"
-        oninput="setGroundHeight(this.value)"
-      />
+      <div class="control-group">
+        <div class="section-label">Environment Telemetry</div>
+        <div class="telemetry-row">
+          <span>Ground Offset</span>
+          <span id="groundVal">-10m</span>
+        </div>
+        <input
+          type="range"
+          min="-100"
+          max="0"
+          step="1"
+          value="-10"
+          oninput="document.getElementById('groundVal').innerText = this.value + 'm'; setGroundHeight(this.value)"
+        />
+      </div>
 
-      <div class="section-label">System Performance</div>
-      <label style="font-size: 0.8rem">Movement Speed (Lerp)</label>
-      <input
-        type="range"
-        id="speed"
-        min="0.1"
-        max="10"
-        step="0.1"
-        value="1"
-        oninput="setSpeed(this.value)"
-      />
+      <div class="control-group">
+        <div class="section-label">Processing Engine</div>
+        <div class="telemetry-row">
+          <span>Response Sensitivity</span>
+          <span id="speedVal">1.0x</span>
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="5"
+          step="0.1"
+          value="1"
+          oninput="document.getElementById('speedVal').innerText = this.value + 'x'; setSpeed(this.value)"
+        />
+      </div>
 
-      <div class="section-label">Text Commands</div>
-      <input id="textInput" type="text" placeholder="Type a word..." />
-      <button onclick="setText()">Apply Text</button>
-
-      <hr />
+      <div class="control-group">
+        <div class="section-label">Uplink Command</div>
+        <input id="textInput" type="text" placeholder="Input alpha-string..." />
+        <button class="btn-primary" onclick="setText()">
+          Execute Broadcast
+        </button>
+      </div>
 
       <button class="btn-toggle" onclick="toggleDroneView()">
-        Toggle High-Poly Drone
+        Toggle Wireframe/High-Poly
       </button>
 
       <div class="compass-box">
-        <div class="section-label" style="margin: 0">Wind Sensor</div>
+        <div class="section-label" style="margin-bottom: 10px">
+          Wind Vector Sensor
+        </div>
         <canvas id="compass" width="200" height="200"></canvas>
+        <div class="telemetry-row">
+          <span>Lat: 28.61N</span>
+          <span>Lon: 77.20E</span>
+        </div>
       </div>
     </div>
 
