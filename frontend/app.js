@@ -1,10 +1,10 @@
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
-import * as BufferGeometryUtils from "https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
 
 /* ---------- SCENE SETUP ---------- */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0c2b);
+scene.background = new THREE.Color(0x0b0c2b); // Deep space blue
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -12,7 +12,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-camera.position.set(0, 30, 80);
+camera.position.set(0, 40, 100);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth - 260, window.innerHeight);
@@ -26,82 +26,72 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
 /* ---------- LIGHTING ---------- */
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(50, 100, 50);
-scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+sunLight.position.set(50, 100, 50);
+scene.add(sunLight);
 
-/* ---------- GROUND ---------- */
-let groundHeight = -10;
+/* ---------- GROUND & GRID ---------- */
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(500, 500),
-  new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 1 })
+  new THREE.PlaneGeometry(1000, 1000),
+  new THREE.MeshStandardMaterial({
+    color: 0x1a1a2e,
+    roughness: 0.8,
+    metalness: 0.2,
+  })
 );
 ground.rotation.x = -Math.PI / 2;
-ground.position.y = groundHeight;
+ground.position.y = -10;
 scene.add(ground);
 
-const grid = new THREE.GridHelper(500, 50, 0x999999, 0x999999);
-grid.position.y = groundHeight + 0.1;
+const grid = new THREE.GridHelper(500, 50, 0x444466, 0x222244);
+grid.position.y = -9.9;
 scene.add(grid);
 
-window.setGroundHeight = (value) => {
-  const maxGround = -10; // starting position
-  const minGround = -200; // maximum downward
-
-  const percentage = parseFloat(value) / 100;
-  groundHeight = maxGround + percentage * (minGround - maxGround);
-  ground.position.y = groundHeight;
-  grid.position.y = groundHeight + 0.1;
+window.setGroundHeight = (val) => {
+  const h = parseFloat(val);
+  ground.position.y = h;
+  grid.position.y = h + 0.1;
 };
-
-/* ---------- WIND INDICATOR ---------- */
-// let wind = { direction: new THREE.Vector3(1, 0, 0), strength: 5 };
-// const windArrow = new THREE.ArrowHelper(
-//   wind.direction,
-//   new THREE.Vector3(-80, 5, -80),
-//   20,
-//   0x00ffcc
-// );
-// scene.add(windArrow);
 
 /* ---------- DRONE GEOMETRY ---------- */
 function createDroneGeometry() {
   const geometries = [];
 
-  const bodyGeom = new THREE.CylinderGeometry(0.15, 0.2, 0.4, 8);
-  geometries.push(bodyGeom);
+  // Main Body
+  const body = new THREE.CylinderGeometry(0.15, 0.2, 0.4, 8);
+  geometries.push(body);
 
+  // X-Frame Arms
   for (let i = 0; i < 2; i++) {
-    const armGeom = new THREE.BoxGeometry(0.8, 0.05, 0.05);
-    armGeom.rotateY((i * Math.PI) / 2);
-    geometries.push(armGeom);
+    const arm = new THREE.BoxGeometry(1.0, 0.05, 0.05);
+    arm.rotateY((i * Math.PI) / 2 + Math.PI / 4);
+    geometries.push(arm);
   }
 
   return BufferGeometryUtils.mergeGeometries(geometries);
 }
 
-/* ---------- MATERIALS & MESHES ---------- */
-const dotMaterial = new THREE.MeshStandardMaterial({
-  color: 0x66ccff,
-  emissive: 0x112233,
-});
-const droneMaterial = new THREE.MeshStandardMaterial({
+/* ---------- INSTANCED MESHES ---------- */
+const COUNT = 1000;
+const dotMat = new THREE.MeshStandardMaterial({
   color: 0x00ffff,
-  emissive: 0x111155,
-  metalness: 0.3,
-  roughness: 0.4,
+  emissive: 0x005555,
+});
+const droneMat = new THREE.MeshStandardMaterial({
+  color: 0x00ffff,
+  metalness: 0.6,
+  roughness: 0.2,
 });
 
-const COUNT = 1000;
 const dotMesh = new THREE.InstancedMesh(
-  new THREE.SphereGeometry(0.35, 8, 8),
-  dotMaterial,
+  new THREE.SphereGeometry(0.3, 8, 8),
+  dotMat,
   COUNT
 );
 const droneMesh = new THREE.InstancedMesh(
   createDroneGeometry(),
-  droneMaterial,
+  droneMat,
   COUNT
 );
 
@@ -109,8 +99,19 @@ scene.add(dotMesh); // Default view
 let droneMode = "dot";
 const dummy = new THREE.Object3D();
 
-/* ---------- INTERFACE FUNCTIONS ---------- */
-window.toggleDroneView = function () {
+// Store current positions for smooth LERPing
+const currentPositions = Array.from(
+  { length: COUNT },
+  () => new THREE.Vector3(0, 0, 0)
+);
+
+/* ---------- STATE & CONTROLS ---------- */
+let speedMultiplier = 1.0;
+window.setSpeed = (v) => {
+  speedMultiplier = parseFloat(v);
+};
+
+window.toggleDroneView = () => {
   droneMode = droneMode === "dot" ? "drone" : "dot";
   if (droneMode === "dot") {
     scene.remove(droneMesh);
@@ -121,17 +122,11 @@ window.toggleDroneView = function () {
   }
 };
 
-let speedMultiplier = 1.0;
-window.setSpeed = (value) => {
-  speedMultiplier = parseFloat(value);
-};
-
 /* ---------- WEBSOCKET & API ---------- */
-let drones = [];
-
+let dronesData = [];
 const ws = new WebSocket("ws://127.0.0.1:8000/ws");
-ws.onmessage = (event) => {
-  drones = JSON.parse(event.data);
+ws.onmessage = (e) => {
+  dronesData = JSON.parse(e.data);
 };
 
 window.setFormation = (name) => {
@@ -143,56 +138,89 @@ window.setFormation = (name) => {
 };
 
 window.setText = () => {
-  const value = document.getElementById("textInput").value;
+  const val = document.getElementById("textInput").value;
   fetch("http://127.0.0.1:8000/formation", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "text", value }),
+    body: JSON.stringify({ name: "text", value: val }),
   });
 };
 
-/* ---------- DRONE STATE ---------- */
-const dronePositions = Array(COUNT)
-  .fill()
-  .map(() => new THREE.Vector3(0, 0, 0));
+/* ---------- WIND SYSTEM ---------- */
+let wind = { direction: new THREE.Vector3(1, 0, 0), strength: 2.0 };
+const compassCanvas = document.getElementById("compass");
+const ctx = compassCanvas.getContext("2d");
+
+function updateWind() {
+  const angle = Date.now() * 0.0005;
+  wind.direction.set(Math.cos(angle), 0, Math.sin(angle));
+  wind.strength = 2 + Math.sin(angle * 0.5) * 1.5;
+}
+
+function drawCompass() {
+  ctx.clearRect(0, 0, 200, 200);
+
+  // Outer Ring
+  ctx.beginPath();
+  ctx.arc(100, 100, 80, 0, Math.PI * 2);
+  ctx.strokeStyle = "#2d345e";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Wind Arrow
+  const angle = Math.atan2(wind.direction.z, wind.direction.x);
+  ctx.save();
+  ctx.translate(100, 100);
+  ctx.rotate(angle);
+
+  ctx.beginPath();
+  ctx.moveTo(40, 0);
+  ctx.lineTo(20, -10);
+  ctx.lineTo(20, 10);
+  ctx.closePath();
+  ctx.fillStyle = "#00ffff";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-40, 0);
+  ctx.lineTo(40, 0);
+  ctx.strokeStyle = "#00ffff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = "#8892b0";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(`${wind.strength.toFixed(1)} m/s`, 100, 160);
+}
 
 /* ---------- ANIMATION LOOP ---------- */
-const MIN_DIST = 0.6; // collision avoidance
-
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
+  updateWind();
+  drawCompass();
 
   const activeMesh = droneMode === "dot" ? dotMesh : droneMesh;
 
-  if (drones.length > 0) {
-    drones.forEach((d, i) => {
+  if (dronesData.length > 0) {
+    dronesData.forEach((d, i) => {
       if (i >= COUNT) return;
 
-      // Target position follows backend exactly (no height restriction)
-      let target = new THREE.Vector3(
-        d.x + (Math.random() - 0.5) * 0.2,
-        d.y * speedMultiplier, // no clamping, free height
-        d.z + (Math.random() - 0.5) * 0.2
-      );
+      // Target comes from Backend Data
+      const targetPos = new THREE.Vector3(d.x, d.y, d.z);
 
-      // Collision avoidance in X/Z plane only
-      for (let j = 0; j < i; j++) {
-        const delta = new THREE.Vector3().subVectors(
-          dronePositions[i],
-          dronePositions[j]
-        );
-        const dist = delta.length();
-        if (dist < MIN_DIST) {
-          delta.y = 0;
-          delta.normalize().multiplyScalar(MIN_DIST - dist);
-          target.add(delta);
-        }
-      }
+      // Speed Multiplier affects the LERP factor (responsiveness)
+      // Lower = sluggish/smooth, Higher = snappy
+      const lerpFactor = 0.05 * speedMultiplier;
+      currentPositions[i].lerp(targetPos, Math.min(lerpFactor, 1.0));
 
-      dronePositions[i].lerp(target, 0.05 * speedMultiplier);
+      dummy.position.copy(currentPositions[i]);
 
-      dummy.position.copy(dronePositions[i]);
+      // Subtle hover jitter
+      dummy.position.y += Math.sin(Date.now() * 0.002 + i) * 0.05;
+
       dummy.updateMatrix();
       activeMesh.setMatrixAt(i, dummy.matrix);
     });

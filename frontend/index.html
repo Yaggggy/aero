@@ -2,8 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>AeroCanvas</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AeroCanvas | Drone Swarm Controller</title>
+
     <script type="importmap">
       {
         "imports": {
@@ -12,107 +13,176 @@
         }
       }
     </script>
+
     <style>
+      :root {
+        --bg-dark: #0b0c2b;
+        --panel-bg: #161b33;
+        --accent: #00ffff;
+        --text-main: #ffffff;
+        --text-dim: #8892b0;
+        --border: #2d345e;
+      }
+
       body {
         margin: 0;
         overflow: hidden;
-        background: #111;
+        background-color: var(--bg-dark);
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text-main);
       }
+
+      /* Sidebar Panel */
       #panel {
         position: fixed;
         left: 0;
         top: 0;
         width: 260px;
         height: 100%;
-        background: #222;
-        z-index: 10; /* Ensure panel stays above the 3D canvas */
+        background: var(--panel-bg);
         padding: 20px;
-        color: white;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         display: flex;
         flex-direction: column;
         gap: 15px;
         box-sizing: border-box;
+        border-right: 1px solid var(--border);
+        z-index: 100;
+        box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
       }
+
       h1 {
         font-size: 1.2rem;
-        margin: 0 0 10px 0;
-        border-bottom: 1px solid #444;
+        margin: 0;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        border-bottom: 1px solid var(--border);
         padding-bottom: 10px;
       }
-      label {
-        font-size: 0.9rem;
-        color: #aaa;
+
+      .section-label {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        margin-top: 10px;
       }
+
+      /* UI Elements */
       input,
       button {
         width: 100%;
-        padding: 8px;
-        cursor: pointer;
+        box-sizing: border-box;
+        outline: none;
       }
+
       button {
-        background: #444;
+        background: #2d345e;
         color: white;
-        border: none;
+        border: 1px solid #3d467a;
+        padding: 10px;
         border-radius: 4px;
-        transition: background 0.2s;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
       }
+
       button:hover {
-        background: #666;
+        background: #3d467a;
+        border-color: var(--accent);
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
       }
+
       #textInput {
-        cursor: text;
-        background: #333;
-        border: 1px solid #444;
+        background: var(--bg-dark);
+        border: 1px solid var(--border);
         color: white;
+        padding: 10px;
+        border-radius: 4px;
+      }
+
+      input[type="range"] {
+        cursor: pointer;
+        accent-color: var(--accent);
+      }
+
+      /* Custom Toggle Button */
+      .btn-toggle {
+        background: #008080;
+        margin-top: 5px;
+      }
+
+      /* Compass Container at Bottom */
+      .compass-box {
+        margin-top: auto;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #compass {
+        width: 120px;
+        height: 120px;
+      }
+
+      hr {
+        width: 100%;
+        border: 0;
+        border-top: 1px solid var(--border);
+        margin: 10px 0;
       }
     </style>
   </head>
 
   <body>
     <div id="panel">
-      <h1>AeroCanvas Control</h1>
+      <h1>AeroCanvas</h1>
 
-      <label>Formations</label>
-      <button onclick="setFormation('circle')">Circle</button>
-      <button onclick="setFormation('grid')">Grid</button>
-      <label for="groundSlider">Ground Height</label>
+      <div class="section-label">Formations</div>
+      <button onclick="setFormation('circle')">Circle Orbit</button>
+      <button onclick="setFormation('grid')">Static Grid</button>
+
+      <div class="section-label">Environment</div>
+      <label style="font-size: 0.8rem">Ground Height</label>
       <input
         type="range"
-        id="groundSlider"
-        min="-20"
-        max="20"
+        min="-50"
+        max="0"
         step="0.5"
         value="-10"
         oninput="setGroundHeight(this.value)"
       />
-      <label for="speed">Animation Speed</label>
+
+      <div class="section-label">System Performance</div>
+      <label style="font-size: 0.8rem">Movement Speed (Lerp)</label>
       <input
         type="range"
         id="speed"
         min="0.1"
-        max="5"
+        max="10"
         step="0.1"
         value="1"
         oninput="setSpeed(this.value)"
       />
 
-      <label>Text Formation</label>
-      <input id="textInput" placeholder="Type here..." />
+      <div class="section-label">Text Commands</div>
+      <input id="textInput" type="text" placeholder="Type a word..." />
       <button onclick="setText()">Apply Text</button>
 
-      <hr
-        style="
-          width: 100%;
-          border: 0;
-          border-top: 1px solid #444;
-          margin: 10px 0;
-        "
-      />
+      <hr />
 
-      <button onclick="toggleDroneView()" style="background: #2e7d32">
-        Toggle Drone View
+      <button class="btn-toggle" onclick="toggleDroneView()">
+        Toggle High-Poly Drone
       </button>
+
+      <div class="compass-box">
+        <div class="section-label" style="margin: 0">Wind Sensor</div>
+        <canvas id="compass" width="200" height="200"></canvas>
+      </div>
     </div>
 
     <script type="module" src="./app.js"></script>
