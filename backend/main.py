@@ -19,9 +19,10 @@ def health():
     return {"status": "ok", "drones": len(engine.drones)}
 
 @app.post("/formation")
-def change_formation(data: dict = Body(...)):
+def change_formation(data: dict):
     name = data.get("name")
-    engine.set_formation(name)
+    value = data.get("value")
+    engine.set_formation(name, value)
     return {"status": "ok", "formation": name}
 
 @app.websocket("/ws")

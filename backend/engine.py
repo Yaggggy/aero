@@ -1,6 +1,7 @@
 import numpy as np
+from tomlkit import value
 from drone import Drone
-from formations import circle_formation, grid_formation
+from formations import circle_formation, grid_formation , text_formation
 
 class SwarmEngine:
     def __init__(self, drone_count=1000):
@@ -17,16 +18,24 @@ class SwarmEngine:
             drones.append(Drone(i, pos, vel, pos.copy()))
         return drones
 
-    def set_formation(self, name):
+    def set_formation(self, name, value=None):
         if name == "circle":
             targets = circle_formation(len(self.drones))
+
         elif name == "grid":
             targets = grid_formation(len(self.drones))
+
+        elif name == "text":
+            if not value:
+                return
+            targets = text_formation(value, len(self.drones))
+
         else:
             raise ValueError("Unknown formation")
 
         for d, t in zip(self.drones, targets):
             d.target = t
+
 
     def tick(self):
         for d in self.drones:
