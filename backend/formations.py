@@ -28,3 +28,5 @@ def grid_formation(n, spacing=3):
                     ])
                 )
     return targets
+
+

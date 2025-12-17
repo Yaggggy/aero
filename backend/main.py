@@ -1,11 +1,17 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect , Body
 from engine import SwarmEngine
-from fastapi import Body
+from fastapi.middleware.cors import CORSMiddleware
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 engine = SwarmEngine(drone_count=1000)
 
 @app.get("/health")
