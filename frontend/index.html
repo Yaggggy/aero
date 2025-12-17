@@ -6,7 +6,7 @@
     <style>
       body {
         margin: 0;
-        background: #0e0e11;
+        background: #ffffff;
         overflow: hidden;
       }
     </style>
@@ -34,7 +34,10 @@
       scene.add(light);
 
       const geometry = new THREE.SphereGeometry(0.3, 8, 8);
-      const material = new THREE.MeshStandardMaterial({ color: 0x4fc3f7 });
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x66ccff,
+        emissive: 0x112233,
+      });
 
       const mesh = new THREE.InstancedMesh(geometry, material, 1000);
       scene.add(mesh);
