@@ -6,10 +6,7 @@ from backend.app.formations import (
 )
 
 class SwarmEngine:
-    """
-    Core Physics Engine: Manages 1000 drones using Numpy for high-performance 
-    vector calculations. Handles smooth LERP-style movement and target switching.
-    """
+
     def __init__(self, drone_count=1000):
         self.dt = 1/60  # Fixed time step for 60fps simulation
         self.max_speed = 5.0
